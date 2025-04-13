@@ -9,13 +9,3 @@ Handlers.add(
   end
 )
 
-Handlers.add(
-  "GetPrice",
-  Handlers.utils.hasMatchingTag("Action", "GetPrice"),
-  function(msg)
-    local price = http.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
-    print("Recebido de " .. msg.From .. ": " .. (msg.Data or ""))
-    Handlers.utils.reply("BTC price: " .. price.body)(msg)
-  end
-)
-
