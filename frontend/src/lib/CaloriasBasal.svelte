@@ -26,7 +26,9 @@
   
       try {
         const mensagem = await sendMessageToProcess(entrada, "Calorias", processId);
-        const mensagens = await lerResultadoDaMensagem(processId, mensagem.messageId);
+        console.log('Resultado envio:', mensagem)
+        const mensagens = await lerResultadoDaMensagem(processId, mensagem);
+        console.log(mensagens)
   
         resultado = mensagens?.[0]?.Data || "✅ Enviado com sucesso, sem resposta.";
       } catch (err) {
