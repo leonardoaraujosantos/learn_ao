@@ -2,7 +2,7 @@
     import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
   
     let entrada = {
-      id: "", // precisa ser string
+      id: "",
       sexo: "masculino",
       idade: 30,
       peso: 75,
@@ -10,41 +10,55 @@
       biotipo: "mesomorfo"
     };
   
-    let resultado: string = "";
+    let resultado: any = null;
+    let erro: string = "";
     let carregando = false;
   
-    const processId = "Xzr7DID-De_gxf1ORvuOfFVyKmb6O0_CEBezsD2kXWw"; // substitua aqui
+    const processId = "Xzr7DID-De_gxf1ORvuOfFVyKmb6O0_CEBezsD2kXWw";
   
     async function simular() {
       carregando = true;
-      resultado = "";
+      resultado = null;
+      erro = "";
   
-      // ⚠️ Gera novo ID como string
       entrada.id = String(crypto.randomUUID());
-  
       console.log("🔍 Enviando entrada para AO:", JSON.stringify(entrada, null, 2));
   
       try {
         const mensagem = await sendMessageToProcess(entrada, "Calorias", processId);
-        console.log('Resultado envio:', mensagem)
         const mensagens = await lerResultadoDaMensagem(processId, mensagem);
-        console.log(mensagens)
+        const resposta = mensagens?.[0]?.Data;
   
-        resultado = mensagens?.[0]?.Data || "✅ Enviado com sucesso, sem resposta.";
+        if (resposta) {
+          resultado = JSON.parse(resposta);
+        } else {
+          erro = "✅ Mensagem enviada, mas sem resposta.";
+        }
       } catch (err) {
-        resultado = "❌ Erro: " + (err?.message || err);
+        erro = "❌ Erro: " + (err?.message || err);
       }
   
       carregando = false;
     }
   </script>
   
-  <!-- UI (mantida) -->
   <style>
     input, select {
       padding: 0.4rem;
       margin-bottom: 0.5rem;
       display: block;
+    }
+    .resultado {
+      margin-top: 1rem;
+      padding: 1rem;
+      background-color: #222;
+      border-radius: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .erro {
+      color: red;
+      font-weight: bold;
+      margin-top: 1rem;
     }
   </style>
   
@@ -84,5 +98,13 @@
   </form>
   
   {#if resultado}
-    <pre>{resultado}</pre>
+    <div class="resultado">
+      ✅ Resultado da simulação:
+      <ul>
+        <li><strong>Calorias:</strong> {resultado.calorias.toFixed(2)} kcal</li>
+        <li><strong>Unidade:</strong> {resultado.unidade}</li>
+      </ul>
+    </div>
+  {:else if erro}
+    <div class="erro">{erro}</div>
   {/if}
