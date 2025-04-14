@@ -10,6 +10,7 @@ type DryRunOptions = {
     tags?: { name: string; value: string }[]
 }
 
+// Envia uma Mensagem
 export async function sendMessageToProcess(data: any, action: string, processId:string) {
     // Peca para assinar pela carteira
     const signer = createDataItemSigner(window.arweaveWallet);
@@ -24,13 +25,14 @@ export async function sendMessageToProcess(data: any, action: string, processId:
     return response;
   }
 
+  // Le uma Mensagem dado um processId/messageId
   export async function lerResultadoDaMensagem(processId: string, messageId: string) {
     const resposta = await result({ process: processId, message: messageId });
     return resposta.Messages;
   }
 
 
-  // DryRun manda uma mensagem e espera uma resposta
+  // DryRun manda uma mensagem e espera uma resposta (Nao precisa conectar)
   export async function dryrunMessage({ processId, action, data, tags = [] }: DryRunOptions) {
     const payload = typeof data === "string" ? data : JSON.stringify(data || {})
   

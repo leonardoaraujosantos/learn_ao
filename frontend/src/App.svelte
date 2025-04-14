@@ -1,6 +1,7 @@
 <script lang="ts">
   import ButtonConnectWallet from './lib/ButtonConnectWallet.svelte';
   import CaloriasBasal from './lib/CaloriasBasal.svelte';
+  import RegistrarAtividade from './lib/RegistrarAtividade.svelte';
 </script>
 
 <main>
@@ -15,6 +16,10 @@
 
   <section class="painel">
     <CaloriasBasal />
+  </section>
+
+  <section class="painel">
+    <RegistrarAtividade />
   </section>
 </main>
 

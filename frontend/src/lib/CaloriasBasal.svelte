@@ -18,7 +18,7 @@
   
     const processId = "Xzr7DID-De_gxf1ORvuOfFVyKmb6O0_CEBezsD2kXWw";
   
-    async function simular() {
+    async function processarCaloriasBasalAO() {
       carregando = true;
       resultado = null;
       erro = "";
@@ -94,7 +94,7 @@
   
   <h2>🔥 Simulador de Calorias (mensagem real com carteira)</h2>
   
-  <form on:submit|preventDefault={simular}>
+  <form on:submit|preventDefault={processarCaloriasBasalAO}>
     <label>Sexo:
       <select bind:value={entrada.sexo}>
         <option value="masculino">Masculino</option>
