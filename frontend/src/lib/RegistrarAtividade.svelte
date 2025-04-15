@@ -1,5 +1,6 @@
 <script lang="ts">
     import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
+    import {estimarCaloriasPorPrompt} from '../lib/estimarCaloriasPrompt'
     import { walletAddress } from '../stores/blockchainStore';
     import { get } from 'svelte/store';
     import Chart from 'chart.js/auto';
