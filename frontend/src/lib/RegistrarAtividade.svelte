@@ -182,6 +182,17 @@
     });
   }
 
+  function exportarAtividadesComoJSON() {
+    const dataStr = JSON.stringify(atividades, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'atividades.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   $: if ($walletAddress) {
     carregarGrafico($walletAddress);
   }
@@ -216,6 +227,7 @@
 
 <div class="botoes-secundarios">
   <button on:click={apagarAtividades}>🗑️ Apagar todas as atividades</button>
+  <button on:click={exportarAtividadesComoJSON}>📤 Exportar Atividades</button>
 </div>
 
 {#if resultado}
