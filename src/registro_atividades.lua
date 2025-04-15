@@ -121,3 +121,25 @@ Handlers.add("ListarGeral", Handlers.utils.hasMatchingTag("Action", "ListarGeral
     Tags = { { name = "Content-Type", value = "application/json" } }
   })
 end)
+
+-- Handler 4: Apagar todas as atividades de um usuário
+Handlers.add("ApagarPorUsuario", Handlers.utils.hasMatchingTag("Action", "ApagarPorUsuario"), function(msg)
+  local ok, dados = pcall(function() return json.decode(msg.Data or "{}") end)
+  if not ok or type(dados) ~= "table" then
+    msg.reply({ Data = json.encode({ erro = "❌ JSON inválido" }) })
+    return
+  end
+
+  local wallet = dados.wallet
+  if not wallet then
+    msg.reply({ Data = json.encode({ erro = "⚠️ Campo 'wallet' é obrigatório para apagar." }) })
+    return
+  end
+
+  local stmt = db:prepare("DELETE FROM atividades WHERE wallet = ?")
+  stmt:bind(1, wallet)
+  stmt:step()
+  stmt:finalize()
+
+  msg.reply({ Data = json.encode({ status = "🗑️ Atividades do usuário apagadas com sucesso" }) })
+end)
