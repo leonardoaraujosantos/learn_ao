@@ -9,3 +9,11 @@ export const userInfo = writable<{
   biotipo: string;
   ano_nascimento: string;
 } | null>(null);
+export const lastMeasurement = writable<{
+  peso: number;
+  imc: number;
+  gordura_corporal: number;
+  massa_gordura: number;
+  calorias_basal: number;
+  data: string;
+} | null>(null);

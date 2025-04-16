@@ -16,6 +16,7 @@
     let gordura = 15;
     let massaGordura = 12;
     let dataMedicao = new Date().toISOString().slice(0, 16);
+    let caloriasBasal = 0;
   
     let resultado = "";
     let erro = "";
@@ -45,6 +46,7 @@
         imc,
         gordura_corporal: gordura,
         massa_gordura: massaGordura,
+        calorias_basal: caloriasBasal,
         data: new Date(dataMedicao).toISOString()
       };
   
@@ -77,6 +79,39 @@
       resultado = "🗑️ Usuário apagado";
     }
   
+    async function exportarMedidas() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(medidas));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "medidas.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
+  
+    async function importarMedidas(event: Event) {
+      const input = event.target as HTMLInputElement;
+      const file = input.files?.[0];
+      if (!file) return;
+  
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          try {
+            const importedData = JSON.parse(result);
+            medidas = importedData.medidas || [];
+            resultado = "✅ Medidas importadas.";
+          } catch (error) {
+            erro = "❌ Erro ao importar medidas.";
+          }
+        } else {
+          erro = "❌ Erro ao ler o arquivo.";
+        }
+      };
+      reader.readAsText(file);
+    }
+  
     $: if ($walletAddress) listarMedidas();
   </script>
   
@@ -84,18 +119,28 @@
   
   <form on:submit|preventDefault={registrarUsuario}>
     <h3>📋 Cadastrar Usuário</h3>
-    <input type="text" placeholder="Nome" bind:value={nome} />
-    <input type="number" placeholder="Ano Nascimento" bind:value={anoNascimento} />
-    <input type="number" placeholder="Altura (cm)" bind:value={altura} />
-    <select bind:value={sexo}>
+    <label for="nome">Nome</label>
+    <input id="nome" type="text" placeholder="Nome" bind:value={nome} />
+    
+    <label for="anoNascimento">Ano Nascimento</label>
+    <input id="anoNascimento" type="number" placeholder="Ano Nascimento" bind:value={anoNascimento} />
+    
+    <label for="altura">Altura (cm)</label>
+    <input id="altura" type="number" placeholder="Altura (cm)" bind:value={altura} />
+    
+    <label for="sexo">Sexo</label>
+    <select id="sexo" bind:value={sexo}>
       <option value="masculino">Masculino</option>
       <option value="feminino">Feminino</option>
     </select>
-    <select bind:value={biotipo}>
+    
+    <label for="biotipo">Biotipo</label>
+    <select id="biotipo" bind:value={biotipo}>
       <option value="endomorfo">Endomorfo</option>
       <option value="mesomorfo">Mesomorfo</option>
       <option value="ectomorfo">Ectomorfo</option>
     </select>
+    
     <button>Registrar Usuário</button>
   </form>
   
@@ -103,17 +148,33 @@
   
   <form on:submit|preventDefault={registrarMedida}>
     <h3>📏 Registrar Medidas Corporais</h3>
-    <input type="number" step="0.1" placeholder="Peso (kg)" bind:value={peso} />
-    <input type="number" step="0.1" placeholder="IMC" bind:value={imc} />
-    <input type="number" step="0.1" placeholder="% Gordura" bind:value={gordura} />
-    <input type="number" step="0.1" placeholder="Massa de Gordura" bind:value={massaGordura} />
-    <input type="datetime-local" bind:value={dataMedicao} />
+    <label for="peso">Peso (kg)</label>
+    <input id="peso" type="number" step="0.1" placeholder="Peso (kg)" bind:value={peso} />
+    
+    <label for="imc">IMC</label>
+    <input id="imc" type="number" step="0.1" placeholder="IMC" bind:value={imc} />
+    
+    <label for="gordura">Gordura (%)</label>
+    <input id="gordura" type="number" step="0.1" placeholder="% Gordura" bind:value={gordura} />
+    
+    <label for="massaGordura">Massa de Gordura (kg)</label>
+    <input id="massaGordura" type="number" step="0.1" placeholder="Massa de Gordura" bind:value={massaGordura} />
+    
+    <label for="caloriasBasal">Calorias Basal</label>
+    <input id="caloriasBasal" type="number" step="0.1" placeholder="Calorias Basal" bind:value={caloriasBasal} />
+    
+    <label for="dataMedicao">Data da Medição</label>
+    <input id="dataMedicao" type="datetime-local" bind:value={dataMedicao} />
+    
     <button>Registrar Medida</button>
   </form>
   
   <div style="margin-top: 1rem;">
     <button on:click={apagarMedidas}>🗑️ Apagar Medidas</button>
     <button on:click={apagarUsuario}>❌ Apagar Usuário</button>
+    <button on:click={exportarMedidas}>📤 Exportar Medidas</button>
+    <input type="file" accept="application/json" on:change={importarMedidas} style="display:none;" id="importFile" />
+    <label for="importFile" style="cursor:pointer;">📥 Importar Medidas</label>
   </div>
   
   {#if resultado}
@@ -130,7 +191,7 @@
       {#each medidas as m}
         <li>
           <b>{new Date(m.data).toLocaleString()}</b><br />
-          Peso: {m.peso}kg, IMC: {m.imc}, Gordura: {m.gordura}%, Massa Gordura: {m.massa_gordura}kg
+          Peso: {m.peso}kg, IMC: {m.imc}, Gordura: {m.gordura}%, Massa Gordura: {m.massa_gordura}kg, Calorias Basal: {m.calorias_basal}
         </li>
       {/each}
     </ul>

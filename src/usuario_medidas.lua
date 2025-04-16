@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS medidas (
   imc REAL,
   gordura_corporal REAL,
   massa_gordura REAL,
+  calorias_basal REAL,
   data TEXT DEFAULT CURRENT_TIMESTAMP
 );
 ]])
@@ -63,16 +64,14 @@ Handlers.add("RegistrarMedida", Handlers.utils.hasMatchingTag("Action", "Registr
     msg.reply({ Data = json.encode({ erro = "⚠️ 'wallet' é obrigatória" }) }) return
   end
 
-  local stmt = db:prepare([[
-    INSERT INTO medidas (wallet, peso, imc, gordura_corporal, massa_gordura, data)
-    VALUES (?, ?, ?, ?, ?, ?)
-  ]])
+  local stmt = db:prepare([[INSERT INTO medidas (wallet, peso, imc, gordura_corporal, massa_gordura, calorias_basal, data) VALUES (?, ?, ?, ?, ?, ?, ?)]])
   stmt:bind(1, m.wallet)
   stmt:bind(2, tonumber(m.peso))
   stmt:bind(3, tonumber(m.imc))
   stmt:bind(4, tonumber(m.gordura_corporal))
   stmt:bind(5, tonumber(m.massa_gordura))
-  stmt:bind(6, m.data or os.date("!%Y-%m-%dT%H:%M:%SZ"))
+  stmt:bind(6, tonumber(m.calorias_basal))
+  stmt:bind(7, m.data or os.date("!%Y-%m-%dT%H:%M:%SZ"))
   stmt:step()
   stmt:finalize()
 
@@ -86,7 +85,7 @@ Handlers.add("ListarMedidas", Handlers.utils.hasMatchingTag("Action", "ListarMed
     msg.reply({ Data = json.encode({ erro = "⚠️ JSON inválido ou wallet ausente" }) }) return
   end
 
-  local stmt = db:prepare("SELECT peso, imc, gordura_corporal, massa_gordura, data FROM medidas WHERE wallet = ? ORDER BY data DESC")
+  local stmt = db:prepare("SELECT peso, imc, gordura_corporal, massa_gordura, calorias_basal, data FROM medidas WHERE wallet = ? ORDER BY data DESC")
   stmt:bind(1, dados.wallet)
 
   local res = {}
@@ -148,4 +147,22 @@ Handlers.add("ApagarUsuario", Handlers.utils.hasMatchingTag("Action", "ApagarUsu
   u:finalize()
 
   msg.reply({ Data = json.encode({ status = "❌ Usuário e medidas apagados" }) })
+end)
+
+Handlers.add("UltimaMedida", Handlers.utils.hasMatchingTag("Action", "UltimaMedida"), function(msg)
+  local ok, dados = pcall(function() return json.decode(msg.Data or "{}") end)
+  if not ok or not dados.wallet then
+    msg.reply({ Data = json.encode({ erro = "⚠️ JSON inválido ou wallet ausente" }) }) return
+  end
+
+  local stmt = db:prepare("SELECT peso, imc, gordura_corporal, massa_gordura, calorias_basal, data FROM medidas WHERE wallet = ? ORDER BY data DESC LIMIT 1")
+  stmt:bind(1, dados.wallet)
+  local row = stmt:step() == sqlite.ROW and stmt:get_named_values() or nil
+  stmt:finalize()
+
+  if row then
+    msg.reply({ Data = json.encode({ ultima_medida = row }) })
+  else
+    msg.reply({ Data = json.encode({ erro = "⚠️ Nenhuma medida encontrada" }) })
+  end
 end)

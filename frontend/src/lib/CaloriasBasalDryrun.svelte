@@ -26,8 +26,8 @@
         });
   
         resultado = resposta || "❌ Nenhuma resposta.";
-      } catch (err) {
-        resultado = "❌ Erro: " + (err.message || err);
+      } catch (err: unknown) {
+        resultado = "❌ Erro: " + ((err as Error).message || String(err));
       }
   
       carregando = false;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { connectWallet, disconnectWallet } from '../lib/wallet';
-  import { isConnectedWallet, walletAddress, userInfo } from '../stores/blockchainStore';
+  import { isConnectedWallet, walletAddress, userInfo, lastMeasurement } from '../stores/blockchainStore';
   import { get } from 'svelte/store';
   import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
 
@@ -8,6 +8,7 @@
   let isOpen = get(isConnectedWallet);
   let usuarioInfo: any = null;
   let erro = "";
+  let ultimaMedida: any = null;
 
   async function carregarInformacoesUsuario(wallet: string) {
     try {
@@ -31,16 +32,41 @@
     }
   }
 
+  async function carregarUltimaMedida(wallet: string) {
+    try {
+      const mensagem = await sendMessageToProcess(
+        { wallet },
+        "UltimaMedida",
+        processId
+      );
+      const mensagens = await lerResultadoDaMensagem(processId, mensagem);
+      const dados = mensagens?.[0]?.Data;
+      if (dados) {
+        ultimaMedida = JSON.parse(dados).ultima_medida;
+        lastMeasurement.set(ultimaMedida);
+        console.log("📈 Última medida carregada:", ultimaMedida);
+      } else {
+        console.log("⚠️ Nenhuma medida encontrada");
+      }
+    } catch (e) {
+      console.error("❌ Erro ao buscar última medida", e);
+    }
+  }
+
   async function handleConnect() {
     const connected = get(isConnectedWallet);
 
     if (!connected) {
       await connectWallet();
       const wallet = get(walletAddress);
-      if (wallet) await carregarInformacoesUsuario(wallet);
+      if (wallet) {
+        await carregarInformacoesUsuario(wallet);
+        await carregarUltimaMedida(wallet);
+      }
     } else {
       await disconnectWallet();
       usuarioInfo = null;
+      ultimaMedida = null;
       userInfo.set(null);
     }
 
@@ -66,6 +92,16 @@
   <div>Debug: No user info or error</div>
 {/if}
 
+{#if ultimaMedida}
+  <div class="medida-box">
+    <p><strong>📏 Peso:</strong> {ultimaMedida.peso} kg</p>
+    <p><strong>📊 IMC:</strong> {ultimaMedida.imc}</p>
+    <p><strong>💧 Gordura Corporal:</strong> {ultimaMedida.gordura_corporal}%</p>
+    <p><strong>💪 Massa Gordura:</strong> {ultimaMedida.massa_gordura} kg</p>
+    <p><strong>📅 Data:</strong> {ultimaMedida.data}</p>
+  </div>
+{/if}
+
 <style>
   .usuario-box {
     margin-top: 1rem;
@@ -79,5 +115,13 @@
     margin-top: 1rem;
     color: red;
     font-weight: bold;
+  }
+  .medida-box {
+    margin-top: 1rem;
+    background: #1a1a1a;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+    color: #eee;
   }
 </style>
