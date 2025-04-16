@@ -138,7 +138,7 @@
     </label>
   
     <button type="submit" disabled={carregando}>
-      {carregando ? "Calculando..." : "Enviar mensagem real"}
+      {carregando ? "Calculando..." : "Calcular"}
     </button>
   </form>
   
