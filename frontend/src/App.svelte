@@ -2,6 +2,7 @@
   import ButtonConnectWallet from './lib/ButtonConnectWallet.svelte';
   import CaloriasBasal from './lib/CaloriasBasal.svelte';
   import RegistrarAtividade from './lib/RegistrarAtividade.svelte';
+  import RegistroUsuarioMedidas from './lib/RegistroUsuarioMedidas.svelte';
 </script>
 
 <main>
@@ -12,6 +13,10 @@
 
   <div class="wallet">
     <ButtonConnectWallet />
+  </div>
+
+  <div class="wallet">
+    <RegistroUsuarioMedidas />
   </div>
 
   <section class="painel">
