@@ -28,7 +28,7 @@
   let atividades: any[] = [];
 
   let chartCanvas: HTMLCanvasElement;
-  let chartResumo: HTMLCanvasElement;
+  let chartResumo: Chart;
   let chartInstance: Chart;
 
   async function registrarAtividade() {
@@ -165,9 +165,9 @@
     if (chartResumo) {
       chartResumo.destroy();
     }
-    const resumoCanvas = document.getElementById('resumoCalorias');
+    const resumoCanvas = document.getElementById('resumoCalorias') as HTMLCanvasElement;
     if (!resumoCanvas) return;
-    chartResumo = new Chart(resumoCanvas as HTMLCanvasElement, {
+    chartResumo = new Chart(resumoCanvas, {
       type: 'bar',
       data: {
         labels: ['Alimentação', 'Exercício'],
