@@ -193,6 +193,53 @@
     URL.revokeObjectURL(url);
   }
 
+  async function importarAtividades(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (!Array.isArray(json)) {
+          erro = "❌ O arquivo JSON deve ser uma lista de atividades.";
+          return;
+        }
+
+        const wallet = get(walletAddress);
+        if (!wallet) {
+          erro = "❌ Conecte sua carteira ArConnect antes de importar.";
+          return;
+        }
+
+        for (const atividade of json) {
+          const payload = {
+            wallet,
+            descricao: atividade.descricao,
+            calorias: atividade.calorias,
+            timestamp: new Date(atividade.timestamp).toISOString()
+          };
+
+          try {
+            await sendMessageToProcess(payload, "RegistrarAtividade", processId);
+          } catch (err) {
+            erro = "❌ Erro ao registrar atividade: " + (err?.message || err);
+            return;
+          }
+        }
+
+        resultado = "✅ Atividades importadas com sucesso.";
+        await carregarGrafico(wallet);
+      } catch (err) {
+        erro = "❌ Erro ao ler o arquivo JSON: " + (err?.message || err);
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
   $: if ($walletAddress) {
     carregarGrafico($walletAddress);
   }
@@ -228,6 +275,8 @@
 <div class="botoes-secundarios">
   <button on:click={apagarAtividades}>🗑️ Apagar todas as atividades</button>
   <button on:click={exportarAtividadesComoJSON}>📤 Exportar Atividades</button>
+  <button on:click={() => document.getElementById('importarAtividadesInput').click()}>📥 Importar Atividades</button>
+  <input id="importarAtividadesInput" type="file" accept=".json" style="display: none;" on:change={importarAtividades} />
 </div>
 
 {#if resultado}
