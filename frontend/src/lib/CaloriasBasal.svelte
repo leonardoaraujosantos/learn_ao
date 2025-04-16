@@ -1,6 +1,8 @@
 <script lang="ts">
     import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
     import { fly } from 'svelte/transition';
+    import { userInfo } from '../stores/blockchainStore';
+    import { onMount } from 'svelte';
   
     let entrada = {
       id: "",
@@ -17,6 +19,19 @@
     let carregando = false;
   
     const processId = "Xzr7DID-De_gxf1ORvuOfFVyKmb6O0_CEBezsD2kXWw";
+  
+    onMount(() => {
+      const unsubscribe = userInfo.subscribe((user) => {
+        if (user) {
+          entrada.sexo = user.sexo;
+          entrada.idade = new Date().getFullYear() - parseInt(user.ano_nascimento, 10);
+          entrada.altura = user.altura_cm;
+          entrada.biotipo = user.biotipo;
+        }
+      });
+  
+      return () => unsubscribe();
+    });
   
     async function processarCaloriasBasalAO() {
       carregando = true;
@@ -37,7 +52,7 @@
         } else {
           erro = "✅ Mensagem enviada, mas sem resposta.";
         }
-      } catch (err) {
+      } catch (err: any) {
         erro = "❌ Erro: " + (err?.message || err);
       }
   
@@ -92,7 +107,7 @@
     }
   </style>
   
-  <h2>🔥 Simulador de Calorias (mensagem real com carteira)</h2>
+  <h2>🔥 Simulador de Calorias Basais</h2>
   
   <form on:submit|preventDefault={processarCaloriasBasalAO}>
     <label>Sexo:

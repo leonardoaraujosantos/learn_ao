@@ -27,9 +27,9 @@
   let carregando = false;
   let atividades: any[] = [];
 
-  let chartCanvas;
-  let chartResumo;
-  let chartInstance;
+  let chartCanvas: HTMLCanvasElement;
+  let chartResumo: HTMLCanvasElement;
+  let chartInstance: Chart;
 
   async function registrarAtividade() {
     carregando = true;
@@ -66,7 +66,7 @@
       atividade.tipo = "fisica";
 
       await carregarGrafico(wallet);
-    } catch (err) {
+    } catch (err: any) {
       erro = "❌ Erro: " + (err?.message || err);
     }
 
@@ -97,7 +97,7 @@
       await sendMessageToProcess(payload, "ApagarAtividadesUsuario", processId);
       await carregarGrafico(wallet);
       resultado = "🗑️ Atividades apagadas com sucesso.";
-    } catch (err) {
+    } catch (err: any) {
       erro = "❌ Erro ao apagar: " + (err?.message || err);
     }
   }
@@ -162,9 +162,12 @@
     console.log("Hoje:", hoje);
     console.log("totalAlimento:", totalAlimento);
     console.log("totalGasto:", totalGasto);
-
-    if (chartResumo) chartResumo.destroy();
-    chartResumo = new Chart(document.getElementById('resumoCalorias') as HTMLCanvasElement, {
+    if (chartResumo) {
+      chartResumo.destroy();
+    }
+    const resumoCanvas = document.getElementById('resumoCalorias');
+    if (!resumoCanvas) return;
+    chartResumo = new Chart(resumoCanvas as HTMLCanvasElement, {
       type: 'bar',
       data: {
         labels: ['Alimentação', 'Exercício'],
@@ -224,7 +227,7 @@
 
           try {
             await sendMessageToProcess(payload, "RegistrarAtividade", processId);
-          } catch (err) {
+          } catch (err: any) {
             erro = "❌ Erro ao registrar atividade: " + (err?.message || err);
             return;
           }
@@ -232,8 +235,8 @@
 
         resultado = "✅ Atividades importadas com sucesso.";
         await carregarGrafico(wallet);
-      } catch (err) {
-        erro = "❌ Erro ao ler o arquivo JSON: " + (err?.message || err);
+      } catch (err: unknown) {
+        erro = "❌ Erro ao ler o arquivo JSON: " + (err instanceof Error ? err.message : String(err));
       }
     };
 
@@ -275,7 +278,10 @@
 <div class="botoes-secundarios">
   <button on:click={apagarAtividades}>🗑️ Apagar todas as atividades</button>
   <button on:click={exportarAtividadesComoJSON}>📤 Exportar Atividades</button>
-  <button on:click={() => document.getElementById('importarAtividadesInput').click()}>📥 Importar Atividades</button>
+  <button on:click={() => {
+    const input = document.getElementById('importarAtividadesInput');
+    if (input) input.click();
+  }}>📥 Importar Atividades</button>
   <input id="importarAtividadesInput" type="file" accept=".json" style="display: none;" on:change={importarAtividades} />
 </div>
 
