@@ -201,7 +201,7 @@
   .section-header {
     display: flex;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     gap: 0.75rem;
   }
 
@@ -227,8 +227,8 @@
   .content-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
   }
 
   @media (max-width: 768px) {
@@ -240,7 +240,7 @@
   .form-card, .results-card {
     background: white;
     border-radius: 1rem;
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     height: 100%;
   }
@@ -248,8 +248,8 @@
   .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
   }
 
   @media (max-width: 500px) {
@@ -261,13 +261,14 @@
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   label {
     font-size: 0.875rem;
     font-weight: 600;
     color: #555;
+    margin-bottom: 0.25rem;
   }
 
   .form-control {
@@ -276,6 +277,8 @@
     border-radius: 0.5rem;
     font-size: 1rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    height: 48px;
+    box-sizing: border-box;
   }
 
   .form-control:focus {
@@ -299,6 +302,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    height: 48px;
+    margin-top: 0.5rem;
   }
 
   .btn-primary:hover:not(:disabled) {
@@ -343,8 +348,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1rem;
-    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    gap: 0.75rem;
   }
 
   .result-icon {
@@ -358,18 +363,18 @@
   }
 
   .result-body p {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 1rem 0;
     color: #666;
   }
 
   .calorie-display {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .calorie-value {
-    font-size: 3rem;
+    font-size: 3.5rem;
     font-weight: 700;
     background: linear-gradient(90deg, #ff0080, #7928ca);
     -webkit-background-clip: text;
@@ -387,7 +392,7 @@
     align-items: center;
     gap: 0.75rem;
     background-color: #fff0f0;
-    padding: 1rem;
+    padding: 1.25rem;
     border-radius: 0.5rem;
     border-left: 4px solid #ff4040;
   }
@@ -404,27 +409,29 @@
   .placeholder-message {
     color: #999;
     text-align: center;
-    padding: 1rem;
+    padding: 1.5rem;
+    font-size: 1rem;
   }
 
   /* Histórico section */
   .historico-section {
-    margin-top: 2rem;
+    margin-top: 3rem;
   }
 
   .historico-grid {
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .historico-card {
     background: white;
     border-radius: 0.75rem;
-    padding: 1rem;
+    padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 1rem;
+    gap: 1.5rem;
     align-items: center;
     transition: transform 0.2s ease;
   }
@@ -438,7 +445,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
     font-size: 0.875rem;
     color: #666;
   }
@@ -450,13 +457,13 @@
   .historico-details {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .detail-item {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
 
   .detail-label {
@@ -474,21 +481,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
 
   .result-flame {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
   .result-value {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: #ff0080;
   }
 
   .result-unit {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     color: #666;
   }
 
