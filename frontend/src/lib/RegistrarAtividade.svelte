@@ -199,7 +199,9 @@
             beginAtZero: true,
             grid: {
               color: 'rgba(200, 200, 200, 0.2)',
-              borderDash: [5, 5]
+              drawOnChartArea: true,
+              drawTicks: false,
+              lineWidth: 1
             },
             ticks: {
               font: {
@@ -211,7 +213,9 @@
             grid: {
               display: true,
               color: 'rgba(200, 200, 200, 0.2)',
-              borderDash: [5, 5]
+              drawOnChartArea: true,
+              drawTicks: false,
+              lineWidth: 1
             },
             ticks: {
               font: {
@@ -281,7 +285,9 @@
             beginAtZero: true,
             grid: {
               color: 'rgba(200, 200, 200, 0.2)',
-              borderDash: [5, 5]
+              drawOnChartArea: true,
+              drawTicks: false,
+              lineWidth: 1
             },
             ticks: {
               font: {
