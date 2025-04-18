@@ -233,7 +233,7 @@
     // Add a text element to display the deficit calórico
     const deficitText = document.createElement('div');
     deficitText.textContent = `Déficit Calórico: ${deficitCalorico}`;
-    deficitText.style.fontSize = '1rem';
+    deficitText.style.fontSize = '0.8rem';
     deficitText.style.maxWidth = '300px';
     deficitText.style.margin = '1rem auto';
     deficitText.style.padding = '0.5rem';
@@ -526,7 +526,7 @@
   .form-panel {
     background: white;
     border-radius: 1rem;
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 1rem;
   }
@@ -579,12 +579,12 @@
   }
 
   .form-control {
-    padding: 0.75rem;
+    padding: 0.3rem;
     border: 1px solid #e0e0e0;
     border-radius: 0.5rem;
     font-size: 1rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    height: 48px;
+    height: 38px;
     box-sizing: border-box;
     flex: 1;
   }
