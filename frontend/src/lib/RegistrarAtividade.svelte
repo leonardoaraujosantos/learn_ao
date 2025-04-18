@@ -1,7 +1,7 @@
 <script lang="ts">
   import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
   import { estimarCaloriasPorPrompt } from '../lib/estimarCaloriasPrompt';
-  import { walletAddress } from '../stores/blockchainStore';
+  import { walletAddress, lastMeasurement } from '../stores/blockchainStore';
   import { get } from 'svelte/store';
   import { fly } from 'svelte/transition';
   import Chart from 'chart.js/auto';
@@ -32,6 +32,12 @@
   let chartCanvas: HTMLCanvasElement;
   let chartResumo: Chart;
   let chartInstance: Chart;
+
+  let caloriasBasal = 0;
+
+  $: if ($lastMeasurement) {
+    caloriasBasal = $lastMeasurement.calorias_basal;
+  }
 
   async function registrarAtividade() {
     carregando = true;
@@ -132,115 +138,11 @@
       const dados = JSON.parse(resposta);
       atividades = dados.atividades || [];
       
-      // Gráfico principal
-      renderizarGraficoAtividades();
-      
-      // Gráfico de resumo diário
+      // Only render the 'Resumo Diário' chart
       renderizarGraficoResumoDiario();
     } catch (error) {
       console.error("Erro ao carregar gráficos:", error);
     }
-  }
-  
-  function renderizarGraficoAtividades() {
-    if (!chartCanvas) return;
-    
-    // Ordenar atividades por data
-    const atividadesOrdenadas = [...atividades].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    
-    const labels = atividadesOrdenadas.map(a => {
-      const data = new Date(a.timestamp);
-      return data.toLocaleDateString('pt-BR', { 
-        day: '2-digit', 
-        month: '2-digit'
-      }) + ' ' + data.toLocaleTimeString('pt-BR', {
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
-    });
-    
-    const caloriasAlimentacao = atividadesOrdenadas.map(a => a.calorias >= 0 ? a.calorias : 0);
-    const caloriasFisica = atividadesOrdenadas.map(a => a.calorias < 0 ? -a.calorias : 0);
-
-    if (chartInstance) chartInstance.destroy();
-    
-    chartInstance = new Chart(chartCanvas, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Alimentação',
-            data: caloriasAlimentacao,
-            backgroundColor: 'rgba(91, 192, 190, 0.7)',
-            borderColor: 'rgba(91, 192, 190, 1)',
-            borderWidth: 0,
-            barPercentage: 0.2,
-            categoryPercentage: 0.8
-          },
-          {
-            label: 'Exercício',
-            data: caloriasFisica,
-            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 0,
-            barPercentage: 0.2,
-            categoryPercentage: 0.8
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { 
-          y: { 
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(200, 200, 200, 0.2)',
-              drawOnChartArea: true,
-              drawTicks: false,
-              lineWidth: 1
-            },
-            ticks: {
-              font: {
-                size: 10
-              }
-            }
-          },
-          x: {
-            grid: {
-              display: true,
-              color: 'rgba(200, 200, 200, 0.2)',
-              drawOnChartArea: true,
-              drawTicks: false,
-              lineWidth: 1
-            },
-            ticks: {
-              font: {
-                size: 9
-              },
-              maxRotation: 45,
-              minRotation: 45
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: {
-              boxWidth: 10,
-              font: {
-                size: 10
-              },
-              usePointStyle: true,
-              pointStyle: 'rect'
-            }
-          }
-        }
-      }
-    });
   }
   
   function renderizarGraficoResumoDiario() {
@@ -259,6 +161,7 @@
     
     const totalAlimento = doDia.filter(a => a.calorias > 0).reduce((s, a) => s + a.calorias, 0);
     const totalGasto = doDia.filter(a => a.calorias < 0).reduce((s, a) => s - a.calorias, 0);
+    const deficitCalorico = totalAlimento - caloriasBasal - totalGasto;
     
     if (chartResumo) chartResumo.destroy();
     
@@ -326,6 +229,21 @@
         }
       }
     });
+
+    // Add a text element to display the deficit calórico
+    const deficitText = document.createElement('div');
+    deficitText.textContent = `Déficit Calórico: ${deficitCalorico}`;
+    deficitText.style.fontSize = '1rem';
+    deficitText.style.maxWidth = '300px';
+    deficitText.style.margin = '1rem auto';
+    deficitText.style.padding = '0.5rem';
+    deficitText.style.textAlign = 'center';
+    deficitText.style.fontWeight = 'bold';
+    deficitText.style.color = deficitCalorico > 0 ? 'red' : 'green';
+    deficitText.style.borderRadius = '0.5rem';
+    deficitText.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+    deficitText.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+    resumoCanvas.parentElement?.appendChild(deficitText);
   }
 
   function exportarAtividadesComoJSON() {
@@ -541,8 +459,6 @@
   {/if}
 
   <div class="chart-container">
-    <canvas bind:this={chartCanvas} height="300"></canvas>
-    
     <div class="resumo-section">
       <div class="section-header small">
         <div class="icon-badge small">📊</div>

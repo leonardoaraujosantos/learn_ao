@@ -28,7 +28,7 @@
   <div class="app-container">
     <nav class="navbar">
       <div class="logo-section">
-        <h1>ArHealth</h1>
+        <h1>Be Healthier</h1>
       </div>
       <ul class="nav-links">
         <li>
