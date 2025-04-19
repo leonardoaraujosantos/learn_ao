@@ -2,19 +2,16 @@
   import { sendMessageToProcess, lerResultadoDaMensagem } from '../lib/ao';
   import { estimarCaloriasPorPrompt } from '../lib/estimarCaloriasPrompt';
   import { walletAddress, lastMeasurement } from '../stores/blockchainStore';
-  import { get } from 'svelte/store';
   import { fly } from 'svelte/transition';
   import Chart from 'chart.js/auto';
+  import { onMount, tick } from 'svelte';
 
   const processId = "niQZAytvrRVoKkxIOuJniZ6ZPA0d2JhXQAMjpIuubks";
 
-  function gerarTimestampISO() {
-    const now = new Date();
-    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
-  }
-
+  // Reactive declarations for form data
+  $: caloriasBasal = $lastMeasurement?.calorias_basal || 0;
+  
+  // State with default values
   let atividade = {
     id: "",
     descricao: "",
@@ -22,134 +19,157 @@
     timestamp: gerarTimestampISO(),
     tipo: "fisica"
   };
-
-  let resultado: string = "";
-  let erro: string = "";
+  
+  let resultado = "";
+  let erro = "";
   let carregando = false;
   let estimandoCalorias = false;
-  let atividades: any[] = [];
-
-  let chartCanvas: HTMLCanvasElement;
-  let chartResumo: Chart;
-  let chartInstance: Chart;
-
-  let caloriasBasal = 0;
-
-  $: if ($lastMeasurement) {
-    caloriasBasal = $lastMeasurement.calorias_basal;
+  let atividades = [];
+  let chartResumo;
+  
+  // Helper function to generate ISO timestamp
+  function gerarTimestampISO() {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
   }
 
+  // Register activity with validation
   async function registrarAtividade() {
     carregando = true;
     resultado = "";
     erro = "";
 
-    const wallet = get(walletAddress);
-    if (!wallet) {
+    if (!$walletAddress) {
       erro = "❌ Conecte sua carteira ArConnect antes de enviar.";
       carregando = false;
       return;
     }
 
-    atividade.id = String(crypto.randomUUID());
-    const caloriasCorrigidas = atividade.tipo === "fisica"
-      ? -Math.abs(atividade.calorias)
-      : Math.abs(atividade.calorias);
-
-    const payload = {
-      wallet,
-      descricao: atividade.descricao,
-      calorias: caloriasCorrigidas,
-      timestamp: atividade.timestamp ? new Date(atividade.timestamp).toISOString() : undefined
-    };
-
     try {
+      // Format data for submission
+      const caloriasCorrigidas = atividade.tipo === "fisica"
+        ? -Math.abs(atividade.calorias)
+        : Math.abs(atividade.calorias);
+      
+      const payload = {
+        wallet: $walletAddress,
+        descricao: atividade.descricao,
+        calorias: caloriasCorrigidas,
+        timestamp: atividade.timestamp ? new Date(atividade.timestamp).toISOString() : undefined,
+        id: crypto.randomUUID()
+      };
+
       const mensagem = await sendMessageToProcess(payload, "RegistrarAtividade", processId);
       const mensagens = await lerResultadoDaMensagem(processId, mensagem);
 
+      // Reset form and show success
       resultado = mensagens?.[0]?.Data || "✅ Enviado com sucesso.";
-      atividade.descricao = "";
-      atividade.calorias = 0;
-      atividade.timestamp = gerarTimestampISO();
-      atividade.tipo = "fisica";
-
-      await carregarGrafico(wallet);
-    } catch (err: any) {
+      resetarFormulario();
+      await carregarGrafico($walletAddress);
+    } catch (err) {
       erro = "❌ Erro: " + (err?.message || err);
+    } finally {
+      carregando = false;
     }
-
-    carregando = false;
   }
 
+  // Reset form to default values
+  function resetarFormulario() {
+    atividade = {
+      id: "",
+      descricao: "",
+      calorias: 0,
+      timestamp: gerarTimestampISO(),
+      tipo: "fisica"
+    };
+  }
+
+  // Estimate calories via AI
   async function estimarCalorias() {
     if (!atividade.descricao) {
       erro = "❌ Forneça uma descrição para estimar as calorias.";
       return;
     }
+    
     estimandoCalorias = true;
     erro = "Estimando...";
-    const estimativa = await estimarCaloriasPorPrompt(atividade.descricao);
-    if (estimativa !== null) {
-      atividade.calorias = Math.round(estimativa);
-      erro = "✅ Estimativa atualizada.";
-    } else {
-      erro = "❌ Falha ao estimar calorias.";
+    
+    try {
+      const estimativa = await estimarCaloriasPorPrompt(atividade.descricao);
+      if (estimativa !== null) {
+        atividade.calorias = Math.round(estimativa);
+        erro = "✅ Estimativa atualizada.";
+      } else {
+        erro = "❌ Falha ao estimar calorias.";
+      }
+    } catch (error) {
+      erro = "❌ Erro na estimativa: " + error.message;
+    } finally {
+      estimandoCalorias = false;
     }
-    estimandoCalorias = false;
   }
 
+  // Delete all activities with confirmation
   async function apagarAtividades() {
     if (!confirm("Tem certeza que deseja apagar todas as atividades? Esta ação não pode ser desfeita.")) {
       return;
     }
     
-    carregando = true;
-    const wallet = get(walletAddress);
-    if (!wallet) {
+    if (!$walletAddress) {
       erro = "❌ Conecte sua carteira ArConnect antes de apagar.";
-      carregando = false;
       return;
     }
-
-    const payload = { wallet };
+    
+    carregando = true;
+    erro = "";
+    resultado = "";
+    
     try {
-      await sendMessageToProcess(payload, "ApagarPorUsuario", processId);
-      await carregarGrafico(wallet);
+      await sendMessageToProcess({ wallet: $walletAddress }, "ApagarPorUsuario", processId);
+      await carregarGrafico($walletAddress);
       resultado = "🗑️ Atividades apagadas com sucesso.";
-    } catch (err: any) {
+    } catch (err) {
       erro = "❌ Erro ao apagar: " + (err?.message || err);
+    } finally {
+      carregando = false;
     }
-    carregando = false;
   }
 
-  async function carregarGrafico(wallet: string) {
-    const payload = {
-      wallet,
-      limite: 100
-    };
-
+  // Load activities and render chart
+  async function carregarGrafico(wallet) {
+    if (!wallet) return;
+    
     try {
-      const mensagem = await sendMessageToProcess(payload, "ListarPorUsuario", processId);
+      const mensagem = await sendMessageToProcess(
+        { wallet, limite: 100 }, 
+        "ListarPorUsuario", 
+        processId
+      );
+      
       const mensagens = await lerResultadoDaMensagem(processId, mensagem);
       const resposta = mensagens?.[0]?.Data;
 
-      if (!resposta) return;
-
-      const dados = JSON.parse(resposta);
-      atividades = dados.atividades || [];
-      
-      // Only render the 'Resumo Diário' chart
-      renderizarGraficoResumoDiario();
+      if (resposta) {
+        const dados = JSON.parse(resposta);
+        atividades = dados.atividades || [];
+        
+        // Wait for DOM to update
+        await tick();
+        renderizarGraficoResumoDiario();
+      }
     } catch (error) {
       console.error("Erro ao carregar gráficos:", error);
     }
   }
   
+  // Render daily summary chart
   function renderizarGraficoResumoDiario() {
-    const resumoCanvas = document.getElementById('resumoCalorias') as HTMLCanvasElement;
+    const resumoCanvas = document.getElementById('resumoCalorias');
     if (!resumoCanvas) return;
     
-    // Calcular dados para hoje
+    // Calculate data for today
     const hoje = new Date();
     const diaInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     const diaFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
@@ -163,8 +183,10 @@
     const totalGasto = doDia.filter(a => a.calorias < 0).reduce((s, a) => s - a.calorias, 0);
     const deficitCalorico = totalAlimento - caloriasBasal - totalGasto;
     
+    // Destroy previous chart if exists
     if (chartResumo) chartResumo.destroy();
     
+    // Create new chart
     chartResumo = new Chart(resumoCanvas, {
       type: 'bar',
       data: {
@@ -230,8 +252,119 @@
       }
     });
 
-    // Add a text element to display the deficit calórico
+    // Update deficit display
+    atualizarDeficitDisplay(resumoCanvas, deficitCalorico);
+  }
+  
+  // Ensure chart is properly initialized even when no data is available
+  function inicializarGraficoVazio() {
+    const resumoCanvas = document.getElementById('resumoCalorias');
+    if (!resumoCanvas) return;
+    
+    // Destroy previous chart if exists
+    if (chartResumo) chartResumo.destroy();
+    
+    // Create empty chart to maintain layout
+    chartResumo = new Chart(resumoCanvas, {
+      type: 'bar',
+      data: {
+        labels: ['Alimentação', 'Exercício'],
+        datasets: [{
+          label: 'Resumo do Dia',
+          data: [0, 0],
+          backgroundColor: ['rgba(91, 192, 190, 0.7)', 'rgba(255, 99, 132, 0.7)'],
+          borderColor: ['rgba(91, 192, 190, 1)', 'rgba(255, 99, 132, 1)'],
+          borderWidth: 0,
+          borderRadius: 3,
+          barThickness: 25
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { 
+          x: { 
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(200, 200, 200, 0.2)',
+              drawOnChartArea: true,
+              drawTicks: false,
+              lineWidth: 1
+            },
+            ticks: {
+              font: {
+                size: 10
+              }
+            }
+          },
+          y: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 11,
+                weight: 'bold'
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: 'Resumo do Dia',
+            position: 'top',
+            font: {
+              size: 12
+            },
+            color: '#666',
+            padding: {
+              bottom: 5
+            }
+          }
+        }
+      }
+    });
+    
+    // Show connection message
     const deficitText = document.createElement('div');
+    deficitText.className = 'deficit-display';
+    deficitText.textContent = 'Conecte sua carteira para ver dados';
+    deficitText.style.fontSize = '0.8rem';
+    deficitText.style.maxWidth = '300px';
+    deficitText.style.margin = '1rem auto';
+    deficitText.style.padding = '0.5rem';
+    deficitText.style.textAlign = 'center';
+    deficitText.style.fontWeight = 'bold';
+    deficitText.style.color = '#666';
+    deficitText.style.borderRadius = '0.5rem';
+    deficitText.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+    deficitText.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+    
+    // Remove any existing deficit display first
+    const existingDisplay = resumoCanvas.parentElement?.querySelector('.deficit-display');
+    if (existingDisplay) {
+      existingDisplay.remove();
+    }
+    
+    resumoCanvas.parentElement?.appendChild(deficitText);
+  }
+
+  // Update the deficit display element
+  function atualizarDeficitDisplay(canvas, deficitCalorico) {
+    // Remove existing deficit display if present
+    const existingDisplay = canvas.parentElement?.querySelector('.deficit-display');
+    if (existingDisplay) {
+      existingDisplay.remove();
+    }
+    
+    // Create new deficit display
+    const deficitText = document.createElement('div');
+    deficitText.className = 'deficit-display';
     deficitText.textContent = `Déficit Calórico: ${deficitCalorico}`;
     deficitText.style.fontSize = '0.8rem';
     deficitText.style.maxWidth = '300px';
@@ -243,9 +376,11 @@
     deficitText.style.borderRadius = '0.5rem';
     deficitText.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
     deficitText.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-    resumoCanvas.parentElement?.appendChild(deficitText);
+    
+    canvas.parentElement?.appendChild(deficitText);
   }
 
+  // Export activities to JSON file
   function exportarAtividadesComoJSON() {
     if (atividades.length === 0) {
       erro = "❌ Não há atividades para exportar.";
@@ -255,73 +390,85 @@
     const dataStr = JSON.stringify(atividades, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
+    
     const a = document.createElement('a');
     a.href = url;
     a.download = 'atividades.json';
     a.click();
-    URL.revokeObjectURL(url);
     
+    URL.revokeObjectURL(url);
     resultado = "✅ Atividades exportadas com sucesso.";
   }
 
-  async function importarAtividades(event: Event) {
-    const input = event.target as HTMLInputElement;
+  // Import activities from JSON file
+  async function importarAtividades(event) {
+    const input = event.target;
     if (!input.files || input.files.length === 0) return;
-
+    
     const file = input.files[0];
-    const reader = new FileReader();
     carregando = true;
     erro = "";
     resultado = "";
-
-    reader.onload = async (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string);
-        if (!Array.isArray(json)) {
-          erro = "❌ O arquivo JSON deve ser uma lista de atividades.";
-          carregando = false;
-          return;
-        }
-
-        const wallet = get(walletAddress);
-        if (!wallet) {
-          erro = "❌ Conecte sua carteira ArConnect antes de importar.";
-          carregando = false;
-          return;
-        }
-
-        for (const atividade of json) {
-          const payload = {
-            wallet,
-            descricao: atividade.descricao,
-            calorias: atividade.calorias,
-            timestamp: new Date(atividade.timestamp).toISOString()
-          };
-
-          try {
-            await sendMessageToProcess(payload, "RegistrarAtividade", processId);
-          } catch (err: any) {
-            erro = "❌ Erro ao registrar atividade: " + (err?.message || err);
-            carregando = false;
-            return;
-          }
-        }
-
-        resultado = "✅ Atividades importadas com sucesso.";
-        await carregarGrafico(wallet);
-      } catch (err: unknown) {
-        erro = "❌ Erro ao ler o arquivo JSON: " + (err instanceof Error ? err.message : String(err));
-      } finally {
-        carregando = false;
+    
+    try {
+      // Validate wallet connection
+      if (!$walletAddress) {
+        throw new Error("Conecte sua carteira ArConnect antes de importar.");
       }
-    };
-
-    reader.readAsText(file);
+      
+      // Read file
+      const text = await file.text();
+      const json = JSON.parse(text);
+      
+      if (!Array.isArray(json)) {
+        throw new Error("O arquivo JSON deve ser uma lista de atividades.");
+      }
+      
+      // Import each activity
+      for (const item of json) {
+        await sendMessageToProcess({
+          wallet: $walletAddress,
+          descricao: item.descricao,
+          calorias: item.calorias,
+          timestamp: new Date(item.timestamp).toISOString()
+        }, "RegistrarAtividade", processId);
+      }
+      
+      resultado = "✅ Atividades importadas com sucesso.";
+      await carregarGrafico($walletAddress);
+      
+    } catch (err) {
+      erro = "❌ Erro: " + (err?.message || err);
+    } finally {
+      carregando = false;
+      input.value = ""; // Reset file input
+    }
   }
 
+  // Load data when wallet changes (reactive)
   $: if ($walletAddress) {
     carregarGrafico($walletAddress);
+  } else {
+    // If no wallet is connected, initialize an empty chart
+    tick().then(() => inicializarGraficoVazio());
   }
+
+  // Initial setup when component mounts
+  onMount(() => {
+    if ($walletAddress) {
+      carregarGrafico($walletAddress);
+    } else {
+      // Initialize empty chart if wallet not connected on mount
+      inicializarGraficoVazio();
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      if (chartResumo) {
+        chartResumo.destroy();
+      }
+    };
+  });
 </script>
 
 <div class="registrar-atividade-container">
@@ -351,6 +498,7 @@
             class="form-control" 
             bind:value={atividade.descricao} 
             placeholder="Ex: Caminhada, Almoço..." 
+            required
           />
         </div>
 
@@ -365,6 +513,7 @@
               min="0" 
               step="1" 
               placeholder="0"
+              required
             />
             <button 
               type="button" 
@@ -389,6 +538,7 @@
             id="datetime" 
             class="form-control" 
             bind:value={atividade.timestamp} 
+            required
           />
         </div>
       </div>
@@ -424,24 +574,16 @@
       <span class="action-icon">📤</span> Exportar Atividades
     </button>
     
-    <button 
-      class="btn-action" 
-      on:click={() => {
-        const input = document.getElementById('importarAtividadesInput');
-        if (input) input.click();
-      }}
-      disabled={carregando}
-    >
+    <label class="btn-action" class:disabled={carregando}>
       <span class="action-icon">📥</span> Importar Atividades
-    </button>
-    
-    <input 
-      id="importarAtividadesInput" 
-      type="file" 
-      accept=".json" 
-      style="display: none;" 
-      on:change={importarAtividades} 
-    />
+      <input 
+        type="file" 
+        accept=".json" 
+        style="display: none;" 
+        on:change={importarAtividades}
+        disabled={carregando} 
+      />
+    </label>
   </div>
 
   {#if resultado}
@@ -531,12 +673,6 @@
     margin-bottom: 1rem;
   }
   
-  @media (max-width: 768px) {
-    .form-panel {
-      padding: 1rem;
-    }
-  }
-
   .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -546,12 +682,6 @@
 
   .full-width {
     grid-column: 1 / -1;
-  }
-
-  @media (max-width: 768px) {
-    .form-grid {
-      grid-template-columns: 1fr;
-    }
   }
 
   .form-group {
@@ -570,12 +700,6 @@
   .input-with-button {
     display: flex;
     gap: 0.75rem;
-  }
-  
-  @media (max-width: 640px) {
-    .input-with-button {
-      flex-direction: column;
-    }
   }
 
   .form-control {
@@ -635,7 +759,8 @@
   }
 
   .btn-primary:disabled, .btn-secondary:disabled, 
-  .btn-action:disabled, .btn-danger:disabled {
+  .btn-action:disabled, .btn-danger:disabled,
+  .disabled {
     opacity: 0.7;
     cursor: not-allowed;
   }
@@ -757,10 +882,24 @@
   }
 
   @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    
     .actions-panel {
       flex-direction: column;
     }
     
+    .input-with-button {
+      flex-direction: column;
+    }
+    
+    .form-panel {
+      padding: 1rem;
+    }
+  }
+
+  @media (max-width: 640px) {
     .input-with-button {
       flex-direction: column;
     }
